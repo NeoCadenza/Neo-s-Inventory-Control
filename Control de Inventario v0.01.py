@@ -94,27 +94,31 @@ def cargar_inventario():
     except (json.JSONDecodeError, OSError):
         print("No se pudo leer el archivo. Se iniciará un inventario vacío.")
         return {}
-        
+
 def main():
     inventario = cargar_inventario()
     while True:
         print("\n=== CONTROL DE INVENTARIO ===")
-        print("1. Consultar productos ")  
-        print("2. Agregar producto") 
-        print("3. Registrar venta") 
-        print("4. Ver bajo inventario") 
-        print("5. Salir") 
-        opcion = input("Selecciona una opción: ").strip()  
-        if opcion == "1":  
-            mostrar_productos(inventario)  
-        elif opcion == "2":  
-            agregar_producto(inventario) 
-        elif opcion == "3": 
-            registrar_venta(inventario)
-        elif opcion == "4": 
-            mostrar_bajo_inventario(inventario)  
-        elif opcion == "5":
-            print("Programa finalizado.") 
-            break 
-        else: 
-            print("Opción inválida. Selecciona un número del 1 al 5.") 
+        print("1. Consultar productos ")  # Opción para revisar existencias.
+        print("2. Agregar producto")  # Opción para registrar un producto.
+        print("3. Registrar venta")  # Opción para descontar una venta.
+        print("4. Ver bajo inventario")  # Opción para consultar alertas.
+        print("5. Salir")  # Opción para cerrar el programa.
+        opcion = input("Selecciona una opción: ").strip()  # Lee la selección del usuario.
+        if opcion == "1":  # Comprueba si se solicitó el catálogo.
+            mostrar_productos(inventario)  # Muestra productos y existencias.
+        elif opcion == "2":  # Comprueba si se solicitó un alta.
+            agregar_producto(inventario)  # Ejecuta el registro del producto.
+        elif opcion == "3":  # Comprueba si se solicitó una venta.
+            registrar_venta(inventario)  # Valida y procesa la venta.
+        elif opcion == "4":  # Comprueba si se solicitaron alertas.
+            mostrar_bajo_inventario(inventario)  # Muestra productos por reabastecer.
+        elif opcion == "5":  # Comprueba si se solicitó salir.
+            print("Programa finalizado.")  # Informa el cierre del programa.
+            break  # Finaliza el ciclo del menú.
+        else:  # Atiende opciones fuera del menú.
+            print("Opción inválida. Selecciona un número del 1 al 5.")  # Solicita una opción válida.
+
+
+if __name__ == "__main__":  # Evita iniciar el menú al importar este archivo.
+    main()  # Inicia la aplicación de inventario.
