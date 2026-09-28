@@ -1,0 +1,12 @@
+{
+    "coca cola 355ml lata": {
+        "nombre": "Coca Cola 355ml Lata",
+        "precio": 30.0,
+        "existencias": 50
+    },
+    "lapiz": {
+        "nombre": "Lapiz",
+        "precio": 7.5,
+        "existencias": 200
+    }
+}
