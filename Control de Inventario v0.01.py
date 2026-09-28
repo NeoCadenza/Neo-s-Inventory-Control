@@ -1,3 +1,8 @@
+import json
+from pathlib import Path
+#Pa crear el archivo, este guarda los datos.
+Ruta_inventario = Path(__file__).with_name("inventario de papeleria.json")
+
 def leer_entero(mensaje, minimo):  # Lee un entero dentro del rango permitido.
     while True:  # Repite la solicitud mientras el dato sea inválido.
         try:  # Convierte la entrada y controla errores de formato.
@@ -14,21 +19,37 @@ def leer_precio(mensaje):  # Lee un precio positivo.
         try:  # Convierte la entrada a número decimal.
             precio = float(input(mensaje))  # Guarda el precio ingresado.
             if precio > 0:  # Evita precios iguales o menores que cero.
-                return precio 
-            print("El precio debe ser mayor que cero.") 
+                return precio  # Devuelve el precio validado.
+            print("El precio debe ser mayor que cero.")  # Explica la regla.
         except ValueError:
-            print("Entrada inválida: escribe un precio numérico.")
+            print("Entrada inválida: escribe un precio numérico.")  # Solicita corregir.
 
 
-def mostrar_productos(inventario):
-    if not inventario: 
-        print("No hay productos registrados.") 
-        return  
-    print("\nPRODUCTOS")  
-    print(f"{'Nombre':<22} {'Precio':>10} {'Existencias':>12}") 
-    for producto in inventario.values(): 
-        print(f"{producto['nombre']:<22} ${producto['precio']:>9.2f} {producto['existencias']:>12}")  
+def mostrar_productos(inventario):  # Presenta el catálogo completo.
+    if not inventario:  # Comprueba si el catálogo está vacío.
+        print("No hay productos registrados.")  # Informa que no hay datos.
+        return  # Termina la consulta sin recorrer el catálogo.
+    print("\nPRODUCTOS")  # Identifica la sección de resultados.
+    print(f"{'Nombre':<22} {'Precio':>10} {'Existencias':>12}")  # Imprime encabezados.
+    for producto in inventario.values():  # Recorre cada producto registrado.
+        print(f"{producto['nombre']:<22} ${producto['precio']:>9.2f} {producto['existencias']:>12}")  # Muestra sus datos.
 
+
+def agregar_producto(inventario):  # Registra un producto nuevo.
+    nombre = input("Nombre del producto: ").strip()  # Limpia espacios del nombre.
+    clave = nombre.casefold()  # Normaliza el nombre para evitar duplicados.
+    if not nombre:  # Rechaza nombres vacíos.
+        print("El nombre no puede quedar vacío.")  # Explica el dato requerido.
+        return  # Cancela el registro incompleto.
+    if clave in inventario:  # Comprueba si el producto ya está registrado.
+        print("Ese producto ya existe en el inventario.")  # Evita sobrescribirlo.
+        return  # Cancela el registro duplicado.
+    precio = leer_precio("Precio del producto: $")  # Solicita un precio válido.
+    existencias = leer_entero("Unidades disponibles: ", 0)  # Permite iniciar en cero.
+    inventario[clave] = {"nombre": nombre, "precio": precio, "existencias": existencias}  # Guarda el nuevo producto.
+    guardar_inventario(inventario)  
+    print("Producto registrado correctamente.")  
+    
 def main():
     inventario = cargar_inventario()
     while True:
