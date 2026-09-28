@@ -49,7 +49,52 @@ def agregar_producto(inventario):  # Registra un producto nuevo.
     inventario[clave] = {"nombre": nombre, "precio": precio, "existencias": existencias}  # Guarda el nuevo producto.
     guardar_inventario(inventario)  
     print("Producto registrado correctamente.")  
-    
+
+
+def registrar_venta(inventario):  # Registra una venta si hay existencias suficientes.
+    nombre = input("Producto vendido: ").strip()  # Solicita el nombre del producto.
+    clave = nombre.casefold()  # Busca sin distinguir mayúsculas y minúsculas.
+    if clave not in inventario:  # Verifica que el producto esté registrado.
+        print("El producto no existe en el inventario.")  # Rechaza productos desconocidos.
+        return  # Termina la operación sin alterar existencias.
+    producto = inventario[clave]  # Obtiene el registro del producto elegido.
+    cantidad = leer_entero("Cantidad vendida: ", 1)  # Exige vender al menos una unidad.
+    if cantidad > producto["existencias"]:  # Comprueba que alcance el inventario.
+        print(f"Venta cancelada: solo hay {producto['existencias']} unidades.")  # Informa el límite disponible.
+        return  # Evita vender más unidades de las disponibles.
+    total = producto["precio"] * cantidad  # Calcula precio por cantidad vendida.
+    producto["existencias"] -= cantidad  # Descuenta las unidades vendidas.
+    print(f"Venta registrada. Total: ${total:.2f}")  # Muestra el importe cobrado.
+    print(f"Existencias restantes: {producto['existencias']}")  # Confirma el nuevo inventario.
+    guardar_inventario(inventario)  
+
+def mostrar_bajo_inventario(inventario):  # Lista productos con menos de cinco unidades.
+    productos_bajos = [producto for producto in inventario.values() if producto["existencias"] < 5]  # Filtra existencias bajas.
+    if not productos_bajos:  # Comprueba si hay productos por reabastecer.
+        print("No hay productos con bajo inventario.")  # Informa que no hay alertas.
+        return  # Termina sin mostrar una lista vacía.
+    print("\nPRODUCTOS CON MENOS DE 5 UNIDADES")  # Identifica la alerta.
+    for producto in productos_bajos:  # Recorre los productos filtrados.
+        print(f"{producto['nombre']}: {producto['existencias']} unidades")  # Muestra nombre y cantidad.
+
+def guardar_inventario(inventario):
+    with Ruta_inventario.open("w", encoding="utf-8") as archivo:
+        json.dump(inventario, archivo, ensure_ascii=False, indent=4)
+
+
+def cargar_inventario():
+    if not Ruta_inventario.exists():
+        inventario = {}
+        guardar_inventario(inventario)
+        return inventario
+
+    try:
+        with Ruta_inventario.open("r", encoding="utf-8") as archivo:
+            return json.load(archivo)
+    except (json.JSONDecodeError, OSError):
+        print("No se pudo leer el archivo. Se iniciará un inventario vacío.")
+        return {}
+        
 def main():
     inventario = cargar_inventario()
     while True:
