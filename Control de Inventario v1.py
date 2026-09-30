@@ -1,97 +1,102 @@
+# Importa los modulos necesarios.
 import json
 import os
 from pathlib import Path
 import sys
 import time
 
+# Detecta el sistema operativo para usar la funcion adecuada.
 if os.name == "nt":
     import msvcrt
 else:
     import select
 
-#Pa crear el archivo, este guarda los datos.
+#  Crea las rutas de inventario e documento.
 Ruta_inventario = Path(__file__).with_name("inventario de papeleria.json")
 Ruta_documentos = Path(__file__).with_name("documentos")
 
-def leer_entero(mensaje, minimo):  # Lee un entero dentro del rango permitido.
-    while True:  # Repite la solicitud mientras el dato sea inválido.
-        try:  # Convierte la entrada y controla errores de formato.
-            valor = int(input(mensaje))  # Guarda la cantidad ingresada.
-            if valor >= minimo:  # Comprueba el mínimo aceptado.
-                return valor  # Devuelve el entero validado.
-            print(f"Ingresa un número mayor o igual que {minimo}.")  # Informa el límite.
-        except ValueError:  # Atiende texto que no representa un número.
-            print("Entrada inválida: escribe un número entero.")  # Solicita corregir.
-
-
-def leer_precio(mensaje):  # Lee un precio positivo.
-    while True:  # Mantiene la validación hasta recibir un precio válido.
-        try:  # Convierte la entrada a número decimal.
-            precio = float(input(mensaje))  # Guarda el precio ingresado.
-            if precio > 0:  # Evita precios iguales o menores que cero.
-                return precio  # Devuelve el precio validado.
-            print("El precio debe ser mayor que cero.")  # Explica la regla.
+# Funcion de lectura de enteros y validacion de los precios.
+def leer_entero(mensaje, minimo):
+    while True:
+        try:
+            valor = int(input(mensaje))
+            if valor >= minimo:
+                return valor
+            print(f"Ingresa un número mayor o igual que {minimo}.")
         except ValueError:
-            print("Entrada inválida: escribe un precio numérico.")  # Solicita corregir.
+            print("Entrada inválida: escribe un número entero.")
 
+# Funcion para leer precios y validarlos.
+def leer_precio(mensaje):
+    while True:
+        try:
+            precio = float(input(mensaje))
+            if precio > 0:
+                return precio
+            print("El precio debe ser mayor que cero.")
+        except ValueError:
+            print("Entrada inválida: escribe un precio numérico.")
 
-def mostrar_productos(inventario):  # Presenta el catálogo completo.
-    if not inventario:  # Comprueba si el catálogo está vacío.
-        print("No hay productos registrados.")  # Informa que no hay datos.
-        return  # Termina la consulta sin recorrer el catálogo.
-    print("\nPRODUCTOS")  # Identifica la sección de resultados.
-    print(f"{'Nombre':<22} {'Precio':>10} {'Existencias':>12}")  # Imprime encabezados.
-    for producto in inventario.values():  # Recorre cada producto registrado.
-        print(f"{producto['nombre']:<22} ${producto['precio']:>9.2f} {producto['existencias']:>12}")  # Muestra sus datos.
+#Funcion que muestra los productos que hay.
+def mostrar_productos(inventario):
+    if not inventario:
+        print("No hay productos registrados.")
+        return
+    print("\nPRODUCTOS")
+    print(f"{'Nombre':<22} {'Precio':>10} {'Existencias':>12}")
+    for producto in inventario.values():
+        print(f"{producto['nombre']:<22} ${producto['precio']:>9.2f} {producto['existencias']:>12}")
 
-
-def agregar_producto(inventario):  # Registra un producto nuevo.
-    nombre = input("Nombre del producto: ").strip()  # Limpia espacios del nombre.
-    clave = nombre.casefold()  # Normaliza el nombre para evitar duplicados.
-    if not nombre:  # Rechaza nombres vacíos.
-        print("El nombre no puede quedar vacío.")  # Explica el dato requerido.
-        return  # Cancela el registro incompleto.
-    if clave in inventario:  # Comprueba si el producto ya está registrado.
-        print("Ese producto ya existe en el inventario.")  # Evita sobrescribirlo.
-        return  # Cancela el registro duplicado.
-    precio = leer_precio("Precio del producto: $")  # Solicita un precio válido.
-    existencias = leer_entero("Unidades disponibles: ", 0)  # Permite iniciar en cero.
-    inventario[clave] = {"nombre": nombre, "precio": precio, "existencias": existencias}  # Guarda el nuevo producto.
+#Funcion que agrega productos al inventario.
+def agregar_producto(inventario):
+    nombre = input("Nombre del producto: ").strip()
+    clave = nombre.casefold()
+    if not nombre:
+        print("El nombre no puede quedar vacío.")
+        return
+    if clave in inventario:
+        print("Ese producto ya existe en el inventario.")
+        return
+    precio = leer_precio("Precio del producto: $")
+    existencias = leer_entero("Unidades disponibles: ", 0)
+    inventario[clave] = {"nombre": nombre, "precio": precio, "existencias": existencias}
     guardar_inventario(inventario)  
     print("Producto registrado correctamente.")  
 
-
-def registrar_venta(inventario):  # Registra una venta si hay existencias suficientes.
-    nombre = input("Producto vendido: ").strip()  # Solicita el nombre del producto.
-    clave = nombre.casefold()  # Busca sin distinguir mayúsculas y minúsculas.
-    if clave not in inventario:  # Verifica que el producto esté registrado.
-        print("El producto no existe en el inventario.")  # Rechaza productos desconocidos.
-        return  # Termina la operación sin alterar existencias.
-    producto = inventario[clave]  # Obtiene el registro del producto elegido.
-    cantidad = leer_entero("Cantidad vendida: ", 1)  # Exige vender al menos una unidad.
-    if cantidad > producto["existencias"]:  # Comprueba que alcance el inventario.
-        print(f"Venta cancelada: solo hay {producto['existencias']} unidades.")  # Informa el límite disponible.
-        return  # Evita vender más unidades de las disponibles.
-    total = producto["precio"] * cantidad  # Calcula precio por cantidad vendida.
-    producto["existencias"] -= cantidad  # Descuenta las unidades vendidas.
-    print(f"Venta registrada. Total: ${total:.2f}")  # Muestra el importe cobrado.
-    print(f"Existencias restantes: {producto['existencias']}")  # Confirma el nuevo inventario.
+#Funcion que registra la venta de algun producto, actualizando el inventario en consecuencia.
+def registrar_venta(inventario):
+    nombre = input("Producto vendido: ").strip()
+    clave = nombre.casefold()
+    if clave not in inventario:
+        print("El producto no existe en el inventario.")
+        return
+    producto = inventario[clave]
+    cantidad = leer_entero("Cantidad vendida: ", 1)
+    if cantidad > producto["existencias"]:
+        print(f"Venta cancelada: solo hay {producto['existencias']} unidades.")
+        return
+    total = producto["precio"] * cantidad
+    producto["existencias"] -= cantidad
+    print(f"Venta registrada. Total: ${total:.2f}")
+    print(f"Existencias restantes: {producto['existencias']}")
     guardar_inventario(inventario)  
 
-def mostrar_bajo_inventario(inventario):  # Lista productos con menos de cinco unidades.
-    productos_bajos = [producto for producto in inventario.values() if producto["existencias"] < 5]  # Filtra existencias bajas.
-    if not productos_bajos:  # Comprueba si hay productos por reabastecer.
-        print("No hay productos con bajo inventario.")  # Informa que no hay alertas.
-        return  # Termina sin mostrar una lista vacía.
-    print("\nPRODUCTOS CON MENOS DE 5 UNIDADES")  # Identifica la alerta.
-    for producto in productos_bajos:  # Recorre los productos filtrados.
-        print(f"{producto['nombre']}: {producto['existencias']} unidades")  # Muestra nombre y cantidad.
+#Funcion que demuestra productos con menos de cinco unidades.
+def mostrar_bajo_inventario(inventario):
+    productos_bajos = [producto for producto in inventario.values() if producto["existencias"] < 5]
+    if not productos_bajos:
+        print("No hay productos con bajo inventario.")
+        return
+    print("\nPRODUCTOS CON MENOS DE 5 UNIDADES")
+    for producto in productos_bajos:
+        print(f"{producto['nombre']}: {producto['existencias']} unidades")
 
+#Funcion que guarda el inventario en el archivo JSON.
 def guardar_inventario(inventario):
     with Ruta_inventario.open("w", encoding="utf-8") as archivo:
         json.dump(inventario, archivo, ensure_ascii=False, indent=4)
 
-
+#Funcion que carga el inventario ya guardado en el archivo JSON, si no, crea uno nuevo.
 def cargar_inventario():
     if not Ruta_inventario.exists():
         inventario = {}
@@ -105,7 +110,7 @@ def cargar_inventario():
         print("No se pudo leer el archivo. Se iniciará un inventario vacío.")
         return {}
 
-
+#Funcion que se encarga de crear los documentos de ejemplo si es que este no existe.
 def preparar_documentos():
     """Crea los documentos de ejemplo si aún no existen."""
     Ruta_documentos.mkdir(exist_ok=True)
@@ -120,7 +125,7 @@ def preparar_documentos():
         if not ruta.exists():
             ruta.write_text(contenido, encoding="utf-8")
 
-
+#Funcion que solicita la fecha al usuario y valida el formato.
 def solicitar_fecha():
     """Valida la fecha como DD/MM/AAAA y la devuelve en una tupla."""
     while True:
@@ -131,13 +136,13 @@ def solicitar_fecha():
         except ValueError:
             print("Fecha inválida. Usa día/mes/año, por ejemplo 12/06/2023.")
 
-
+#Funcion que muestra que esta cargando.
 def mostrar_carga():
     """Muestra un aviso breve de carga, de menos de cinco segundos."""
     print("Cargando programa...")
     time.sleep(2)
 
-
+#Funcion que lee una opcion del menu sin bloquearlo mas de diez minutos.
 def leer_opcion_con_tiempo(mensaje, segundos=600):
     """Lee una línea sin bloquear el menú más de diez minutos."""
     print(mensaje, end="", flush=True)
@@ -162,7 +167,7 @@ def leer_opcion_con_tiempo(mensaje, segundos=600):
     print()
     return None
 
-
+#Funcion que permite seleccionar un documento para leerlo o escribir.
 def seleccionar_documento(accion):
     """Selecciona un archivo disponible y lo lee o reemplaza de forma segura."""
     documentos = sorted(Ruta_documentos.glob("*.txt"))
@@ -188,7 +193,7 @@ def seleccionar_documento(accion):
     except (OSError, UnicodeDecodeError) as error:
         print(f"No se pudo {accion} el documento: {error}")
 
-
+#Funcion que permite crear un documento de texto dentro de la carpeta.
 def crear_documento():
     """Crea un documento de texto dentro de la carpeta permitida."""
     nombre = input("Nombre del nuevo documento (sin ruta): ").strip()
@@ -207,7 +212,7 @@ def crear_documento():
     except OSError as error:
         print(f"No se pudo crear el documento: {error}")
 
-
+#Funcion que demuestra el menu de inventario.
 def menu_inventario(inventario):
     """Conserva las operaciones originales del control de inventario."""
     while True:
@@ -231,6 +236,7 @@ def menu_inventario(inventario):
         else:
             print("Opción inválida. Selecciona un número del 1 al 5.")
 
+#Funcion de el menu principal.
 def main():
     inventario = cargar_inventario()
     while True:
@@ -284,6 +290,6 @@ def main():
             else:
                 print("Opción inválida. Selecciona un número del 1 al 6.")
 
-
-if __name__ == "__main__":  # Evita iniciar el menú al importar este archivo.
-    main()  # Inicia la aplicación de inventario.
+#Esto permite que el programa se ejecute si es llamado directamente.
+if __name__ == "__main__":
+    main()
