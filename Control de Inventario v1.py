@@ -1,7 +1,17 @@
 import json
+import os
 from pathlib import Path
+import sys
+import time
+
+if os.name == "nt":
+    import msvcrt
+else:
+    import select
+
 #Pa crear el archivo, este guarda los datos.
 Ruta_inventario = Path(__file__).with_name("inventario de papeleria.json")
+Ruta_documentos = Path(__file__).with_name("documentos")
 
 def leer_entero(mensaje, minimo):  # Lee un entero dentro del rango permitido.
     while True:  # Repite la solicitud mientras el dato sea inválido.
@@ -95,29 +105,184 @@ def cargar_inventario():
         print("No se pudo leer el archivo. Se iniciará un inventario vacío.")
         return {}
 
+
+def preparar_documentos():
+    """Crea los documentos de ejemplo si aún no existen."""
+    Ruta_documentos.mkdir(exist_ok=True)
+    ejemplos = {
+        "bienvenida.txt": "Documento de bienvenida al sistema de inventario.\n",
+        "proveedores.txt": "Proveedor: Papelería Central\nContacto: proveedor@example.com\n",
+        "notas.txt": "Notas de operación del inventario.\n",
+        "reporte_mensual.txt": "Reporte mensual: agrega aquí el resumen de movimientos.\n",
+    }
+    for nombre, contenido in ejemplos.items():
+        ruta = Ruta_documentos / nombre
+        if not ruta.exists():
+            ruta.write_text(contenido, encoding="utf-8")
+
+
+def solicitar_fecha():
+    """Valida la fecha como DD/MM/AAAA y la devuelve en una tupla."""
+    while True:
+        fecha_texto = input("Fecha (DD/MM/AAAA, por ejemplo 12/06/2023): ").strip()
+        try:
+            fecha = time.strptime(fecha_texto, "%d/%m/%Y")
+            return fecha.tm_mday, fecha.tm_mon, fecha.tm_year
+        except ValueError:
+            print("Fecha inválida. Usa día/mes/año, por ejemplo 12/06/2023.")
+
+
+def mostrar_carga():
+    """Muestra un aviso breve de carga, de menos de cinco segundos."""
+    print("Cargando programa...")
+    time.sleep(2)
+
+
+def leer_opcion_con_tiempo(mensaje, segundos=600):
+    """Lee una línea sin bloquear el menú más de diez minutos."""
+    print(mensaje, end="", flush=True)
+    entrada = ""
+    for _ in range(segundos):
+        if os.name == "nt":
+            if msvcrt.kbhit():
+                caracter = msvcrt.getwch()
+                if caracter in ("\r", "\n"):
+                    print()
+                    return entrada.strip()
+                if caracter == "\b":
+                    entrada = entrada[:-1]
+                else:
+                    entrada += caracter
+                    print(caracter, end="", flush=True)
+        else:
+            disponible, _, _ = select.select([sys.stdin], [], [], 0)
+            if disponible:
+                return sys.stdin.readline().strip()
+        time.sleep(1)
+    print()
+    return None
+
+
+def seleccionar_documento(accion):
+    """Selecciona un archivo disponible y lo lee o reemplaza de forma segura."""
+    documentos = sorted(Ruta_documentos.glob("*.txt"))
+    if not documentos:
+        print("No hay documentos disponibles.")
+        return
+    print("\nDocumentos disponibles:")
+    for indice, ruta in enumerate(documentos, start=1):
+        print(f"{indice}. {ruta.name}")
+    nombre = input("Escribe el nombre exacto del documento: ").strip()
+    ruta = next((elemento for elemento in documentos if elemento.name == nombre), None)
+    if ruta is None:
+        print("Documento inexistente o nombre incorrecto.")
+        return
+    try:
+        if accion == "leer":
+            print(f"\n--- {ruta.name} ---")
+            print(ruta.read_text(encoding="utf-8"))
+        else:
+            contenido = input("Nuevo contenido: ")
+            ruta.write_text(contenido + "\n", encoding="utf-8")
+            print("Documento actualizado correctamente.")
+    except (OSError, UnicodeDecodeError) as error:
+        print(f"No se pudo {accion} el documento: {error}")
+
+
+def crear_documento():
+    """Crea un documento de texto dentro de la carpeta permitida."""
+    nombre = input("Nombre del nuevo documento (sin ruta): ").strip()
+    if not nombre or Path(nombre).name != nombre:
+        print("Nombre inválido. No incluyas carpetas ni dejes el nombre vacío.")
+        return
+    if not nombre.lower().endswith(".txt"):
+        nombre += ".txt"
+    ruta = Ruta_documentos / nombre
+    try:
+        with ruta.open("x", encoding="utf-8") as archivo:
+            archivo.write(input("Contenido inicial: ") + "\n")
+        print("Documento creado correctamente.")
+    except FileExistsError:
+        print("Ya existe un documento con ese nombre.")
+    except OSError as error:
+        print(f"No se pudo crear el documento: {error}")
+
+
+def menu_inventario(inventario):
+    """Conserva las operaciones originales del control de inventario."""
+    while True:
+        print("\n=== CONTROL DE INVENTARIO ===")
+        print("1. Consultar productos")
+        print("2. Agregar producto")
+        print("3. Registrar venta")
+        print("4. Ver bajo inventario")
+        print("5. Volver al menú principal")
+        opcion = input("Selecciona una opción: ").strip()
+        if opcion == "1":
+            mostrar_productos(inventario)
+        elif opcion == "2":
+            agregar_producto(inventario)
+        elif opcion == "3":
+            registrar_venta(inventario)
+        elif opcion == "4":
+            mostrar_bajo_inventario(inventario)
+        elif opcion == "5":
+            return
+        else:
+            print("Opción inválida. Selecciona un número del 1 al 5.")
+
 def main():
     inventario = cargar_inventario()
     while True:
-        print("\n=== CONTROL DE INVENTARIO ===")
-        print("1. Consultar productos ")  # Opción para revisar existencias.
-        print("2. Agregar producto")  # Opción para registrar un producto.
-        print("3. Registrar venta")  # Opción para descontar una venta.
-        print("4. Ver bajo inventario")  # Opción para consultar alertas.
-        print("5. Salir")  # Opción para cerrar el programa.
-        opcion = input("Selecciona una opción: ").strip()  # Lee la selección del usuario.
-        if opcion == "1":  # Comprueba si se solicitó el catálogo.
-            mostrar_productos(inventario)  # Muestra productos y existencias.
-        elif opcion == "2":  # Comprueba si se solicitó un alta.
-            agregar_producto(inventario)  # Ejecuta el registro del producto.
-        elif opcion == "3":  # Comprueba si se solicitó una venta.
-            registrar_venta(inventario)  # Valida y procesa la venta.
-        elif opcion == "4":  # Comprueba si se solicitaron alertas.
-            mostrar_bajo_inventario(inventario)  # Muestra productos por reabastecer.
-        elif opcion == "5":  # Comprueba si se solicitó salir.
-            print("Programa finalizado.")  # Informa el cierre del programa.
-            break  # Finaliza el ciclo del menú.
-        else:  # Atiende opciones fuera del menú.
-            print("Opción inválida. Selecciona un número del 1 al 5.")  # Solicita una opción válida.
+        nombre_usuario = input("Escribe tu nombre o nickname: ").strip()
+        while not nombre_usuario:
+            print("El nombre no puede quedar vacío.")
+            nombre_usuario = input("Escribe tu nombre o nickname: ").strip()
+        print("\n" + "¡Bienvenido/a, " + nombre_usuario + "!" + "\n")
+        mostrar_carga()
+        dia, mes, anio = solicitar_fecha()
+        Fecha = dia, mes, anio
+        print(f"Fecha registrada: {Fecha[0]:02d}/{Fecha[1]:02d}/{Fecha[2]}")
+        preparar_documentos()
+
+        while True:
+            matriz_menu = [
+                ["1", "Leer documento"],
+                ["2", "Escribir en documento"],
+                ["3", "Crear documento"],
+                ["4", "Control de inventario"],
+                ["5", "Cambiar de usuario"],
+                ["6", "Salir"],
+            ]
+            print(f"\n=== MENÚ PRINCIPAL: {nombre_usuario} ===")
+            for fila in matriz_menu:
+                print(f"{fila[0]}. {fila[1]}")
+            opcion = leer_opcion_con_tiempo("Selecciona una opción: ")
+            if opcion is None:
+                continuar = input(
+                    "Han pasado 10 minutos. ¿Deseas continuar? Escribe si o no: "
+                ).strip().casefold()
+                if continuar == "si":
+                    continue
+                if continuar == "no":
+                    break
+                print("Respuesta no válida; escribe si o no.")
+                continue
+            if opcion == "1":
+                seleccionar_documento("leer")
+            elif opcion == "2":
+                seleccionar_documento("escribir")
+            elif opcion == "3":
+                crear_documento()
+            elif opcion == "4":
+                menu_inventario(inventario)
+            elif opcion == "5":
+                break
+            elif opcion == "6":
+                print("Programa finalizado.")
+                return
+            else:
+                print("Opción inválida. Selecciona un número del 1 al 6.")
 
 
 if __name__ == "__main__":  # Evita iniciar el menú al importar este archivo.
